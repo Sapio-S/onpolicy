@@ -11,6 +11,7 @@ from onpolicy.config import get_config
 from onpolicy.envs.starcraft2.StarCraft2_Env import StarCraft2Env
 from onpolicy.envs.starcraft2.smac_maps import get_map_params
 from onpolicy.envs.env_wrappers import ShareSubprocVecEnv, ShareDummyVecEnv
+from onpolicy.runner.shared.smac_runner import SMACRunner as Runner
 
 """Train script for SMAC."""
 
@@ -77,7 +78,7 @@ def main(args):
 
     if all_args.algorithm_name == "rmappo":
         assert (all_args.use_recurrent_policy or all_args.use_naive_recurrent_policy), ("check recurrent policy!")
-    elif all_args.algorithm_name == "mappo":
+    elif all_args.algorithm_name == "mappo" or all_args.algorithm_name == "mat" or all_args.algorithm_name == "mat_dec":
         assert (all_args.use_recurrent_policy == False and all_args.use_naive_recurrent_policy == False), (
             "check recurrent policy!")
     else:
@@ -139,7 +140,23 @@ def main(args):
     # env
     envs = make_train_env(all_args)
     eval_envs = make_eval_env(all_args) if all_args.use_eval else None
-    num_agents = get_map_params(all_args.map_name)["n_agents"]
+    
+    # env
+    if all_args.env_name == "StarCraft2_transfer":
+        if all_args.map_name == "3s_vs_3z" or all_args.map_name == "3s_vs_4z":
+            num_agents = get_map_params("3s_vs_4z")["n_agents"]
+        elif all_args.map_name == "8m_vs_9m" or all_args.map_name == "10m_vs_11m":
+            num_agents = get_map_params("10m_vs_11m")["n_agents"]
+        elif all_args.map_name == "3s5z" or all_args.map_name == "1c3s5z":
+            num_agents = get_map_params("1c3s5z")["n_agents"]
+        elif all_args.map_name == "25m" or all_args.map_name == "27m_vs_30m":
+            num_agents = get_map_params("27m_vs_30m")["n_agents"]
+        else:
+            print("%s is not supported yet" % all_args.map_name)
+            raise NotImplementedError
+    else:
+        num_agents = get_map_params(all_args.map_name)["n_agents"]
+    # num_agents = get_map_params(all_args.map_name)["n_agents"]
 
     config = {
         "all_args": all_args,
@@ -149,12 +166,6 @@ def main(args):
         "device": device,
         "run_dir": run_dir
     }
-
-    # run experiments
-    if all_args.share_policy:
-        from onpolicy.runner.shared.smac_runner import SMACRunner as Runner
-    else:
-        from onpolicy.runner.separated.smac_runner import SMACRunner as Runner
 
     runner = Runner(config)
     runner.run()

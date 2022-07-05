@@ -22,6 +22,8 @@ map_param_registry = {
         "b_race": "T",
         "unit_type_bits": 0,
         "map_type": "marines",
+        "agent_unified_type": [0],
+        "enemy_unified_type": [0],
     },
     "8m": {
         "n_agents": 8,
@@ -31,6 +33,8 @@ map_param_registry = {
         "b_race": "T",
         "unit_type_bits": 0,
         "map_type": "marines",
+        "agent_unified_type": [0],
+        "enemy_unified_type": [0],
     },
     "25m": {
         "n_agents": 25,
@@ -40,6 +44,8 @@ map_param_registry = {
         "b_race": "T",
         "unit_type_bits": 0,
         "map_type": "marines",
+        "agent_unified_type": [0],
+        "enemy_unified_type": [0],
     },
     "5m_vs_6m": {
         "n_agents": 5,
@@ -49,6 +55,8 @@ map_param_registry = {
         "b_race": "T",
         "unit_type_bits": 0,
         "map_type": "marines",
+        "agent_unified_type": [0],
+        "enemy_unified_type": [0],
     },
     "8m_vs_9m": {
         "n_agents": 8,
@@ -58,6 +66,8 @@ map_param_registry = {
         "b_race": "T",
         "unit_type_bits": 0,
         "map_type": "marines",
+        "agent_unified_type": [0],
+        "enemy_unified_type": [0],
     },
     "10m_vs_11m": {
         "n_agents": 10,
@@ -67,6 +77,8 @@ map_param_registry = {
         "b_race": "T",
         "unit_type_bits": 0,
         "map_type": "marines",
+        "agent_unified_type": [0],
+        "enemy_unified_type": [0],
     },
     "27m_vs_30m": {
         "n_agents": 27,
@@ -76,6 +88,8 @@ map_param_registry = {
         "b_race": "T",
         "unit_type_bits": 0,
         "map_type": "marines",
+        "agent_unified_type": [0],
+        "enemy_unified_type": [0],
     },
     "MMM": {
         "n_agents": 10,
@@ -85,6 +99,8 @@ map_param_registry = {
         "b_race": "T",
         "unit_type_bits": 3,
         "map_type": "MMM",
+        "agent_unified_type": [2, 0, 1],
+        "enemy_unified_type": [2, 0, 1],
     },
     "MMM2": {
         "n_agents": 10,
@@ -94,6 +110,8 @@ map_param_registry = {
         "b_race": "T",
         "unit_type_bits": 3,
         "map_type": "MMM",
+        "agent_unified_type": [2, 0, 1],
+        "enemy_unified_type": [2, 0, 1],
     },
     "2s3z": {
         "n_agents": 5,
@@ -103,6 +121,8 @@ map_param_registry = {
         "b_race": "P",
         "unit_type_bits": 2,
         "map_type": "stalkers_and_zealots",
+        "agent_unified_type": [3, 4],
+        "enemy_unified_type": [3, 4],
     },
     "3s5z": {
         "n_agents": 8,
@@ -112,6 +132,8 @@ map_param_registry = {
         "b_race": "P",
         "unit_type_bits": 2,
         "map_type": "stalkers_and_zealots",
+        "agent_unified_type": [3, 4],
+        "enemy_unified_type": [3, 4],
     },
     "3s5z_vs_3s6z": {
         "n_agents": 8,
@@ -121,6 +143,8 @@ map_param_registry = {
         "b_race": "P",
         "unit_type_bits": 2,
         "map_type": "stalkers_and_zealots",
+        "agent_unified_type": [3, 4],
+        "enemy_unified_type": [3, 4],
     },
     "3s_vs_3z": {
         "n_agents": 3,
@@ -130,6 +154,8 @@ map_param_registry = {
         "b_race": "P",
         "unit_type_bits": 0,
         "map_type": "stalkers",
+        "agent_unified_type": [3],
+        "enemy_unified_type": [4],
     },
     "3s_vs_4z": {
         "n_agents": 3,
@@ -139,6 +165,8 @@ map_param_registry = {
         "b_race": "P",
         "unit_type_bits": 0,
         "map_type": "stalkers",
+        "agent_unified_type": [3],
+        "enemy_unified_type": [4],
     },
     "3s_vs_5z": {
         "n_agents": 3,
@@ -148,6 +176,8 @@ map_param_registry = {
         "b_race": "P",
         "unit_type_bits": 0,
         "map_type": "stalkers",
+        "agent_unified_type": [3],
+        "enemy_unified_type": [4],
     },
     "1c3s5z": {
         "n_agents": 9,
@@ -157,6 +187,8 @@ map_param_registry = {
         "b_race": "P",
         "unit_type_bits": 3,
         "map_type": "colossi_stalkers_zealots",
+        "agent_unified_type": [5, 3, 4],
+        "enemy_unified_type": [5, 3, 4],
     },
     "2m_vs_1z": {
         "n_agents": 2,
@@ -166,6 +198,8 @@ map_param_registry = {
         "b_race": "P",
         "unit_type_bits": 0,
         "map_type": "marines",
+        "agent_unified_type": [0],
+        "enemy_unified_type": [4],
     },
     "corridor": {
         "n_agents": 6,
@@ -175,6 +209,8 @@ map_param_registry = {
         "b_race": "Z",
         "unit_type_bits": 0,
         "map_type": "zealots",
+        "agent_unified_type": [4],
+        "enemy_unified_type": [6],
     },
     "6h_vs_8z": {
         "n_agents": 6,
@@ -184,6 +220,8 @@ map_param_registry = {
         "b_race": "P",
         "unit_type_bits": 0,
         "map_type": "hydralisks",
+        "agent_unified_type": [8],
+        "enemy_unified_type": [4],
     },
     "2s_vs_1sc": {
         "n_agents": 2,
@@ -193,6 +231,8 @@ map_param_registry = {
         "b_race": "Z",
         "unit_type_bits": 0,
         "map_type": "stalkers",
+        "agent_unified_type": [3],
+        "enemy_unified_type": [9],
     },
     "so_many_baneling": {
         "n_agents": 7,
@@ -202,6 +242,8 @@ map_param_registry = {
         "b_race": "Z",
         "unit_type_bits": 0,
         "map_type": "zealots",
+        "agent_unified_type": [4],
+        "enemy_unified_type": [7],
     },
     "bane_vs_bane": {
         "n_agents": 24,
@@ -211,6 +253,8 @@ map_param_registry = {
         "b_race": "Z",
         "unit_type_bits": 2,
         "map_type": "bane",
+        "agent_unified_type": [7, 6],
+        "enemy_unified_type": [7, 6],
     },
     "2c_vs_64zg": {
         "n_agents": 2,

@@ -9,7 +9,7 @@ def get_config():
 
     Prepare parameters:
         --algorithm_name <algorithm_name>
-            specifiy the algorithm, including `["rmappo", "mappo", "rmappg", "mappg", "trpo"]`
+            specifiy the algorithm, including `["mat", "mat_dec"]`
         --experiment_name <str>
             an identifier to distinguish different experiment.
         --seed <int>
@@ -158,7 +158,7 @@ def get_config():
 
     # prepare parameters
     parser.add_argument("--algorithm_name", type=str,
-                        default='mappo', choices=["rmappo", "mappo"])
+                        default='mat', choices=["rmappo", "mappo", "mat", "mat_dec"])
 
     parser.add_argument("--experiment_name", type=str, default="check", help="an identifier to distinguish different experiment.")
     parser.add_argument("--seed", type=int, default=1, help="Random seed for numpy/torch")
@@ -175,7 +175,7 @@ def get_config():
                         help="Number of parallel envs for rendering rollouts")
     parser.add_argument("--num_env_steps", type=int, default=10e6,
                         help='Number of environment steps to train (default: 10e6)')
-    parser.add_argument("--user_name", type=str, default='marl',help="[for wandb usage], to specify user's name for simply collecting training data.")
+    parser.add_argument("--user_name", type=str, default='sapios',help="[for wandb usage], to specify user's name for simply collecting training data.")
     parser.add_argument("--use_wandb", action='store_false', default=True, help="[for wandb usage], by default True, will log date to wandb server. or else will use tensorboard to log data.")
 
     # env parameters
@@ -265,7 +265,7 @@ def get_config():
     parser.add_argument("--use_linear_lr_decay", action='store_true',
                         default=False, help='use a linear schedule on the learning rate')
     # save parameters
-    parser.add_argument("--save_interval", type=int, default=1, help="time duration between contiunous twice models saving.")
+    parser.add_argument("--save_interval", type=int, default=100, help="time duration between contiunous twice models saving.")
 
     # log parameters
     parser.add_argument("--log_interval", type=int, default=5, help="time duration between contiunous twice log printing.")
@@ -283,5 +283,17 @@ def get_config():
 
     # pretrained parameters
     parser.add_argument("--model_dir", type=str, default=None, help="by default None. set the path to pretrained model.")
+
+    # add for transformer
+    parser.add_argument("--encode_state", action='store_true', default=False)
+    parser.add_argument("--n_block", type=int, default=1)
+    parser.add_argument("--n_embd", type=int, default=64)
+    parser.add_argument("--n_head", type=int, default=1)
+    parser.add_argument("--dec_actor", action='store_true', default=False)
+    parser.add_argument("--share_actor", action='store_true', default=False)
+
+    # add for online multi-task
+    parser.add_argument("--train_maps", type=str, nargs='+', default=None)
+    parser.add_argument("--eval_maps", type=str, nargs='+', default=None)
 
     return parser
