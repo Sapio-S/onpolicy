@@ -84,6 +84,10 @@ def main(args):
     else:
         raise NotImplementedError
 
+    if all_args.algorithm_name == "mat_dec":
+        all_args.dec_actor = True
+        all_args.share_actor = True
+
     # cuda
     if all_args.cuda and torch.cuda.is_available():
         print("choose to use gpu...")
