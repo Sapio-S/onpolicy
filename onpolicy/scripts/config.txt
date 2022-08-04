@@ -1,0 +1,9 @@
+    CUDA_VISIBLE_DEVICES=0 python train/train_smac.py --env_name ${env} --algorithm_name ${algo} --experiment_name ${exp} --map_name ${map} --seed ${seed} \
+    --use_value_active_masks --use_eval --max_grad_norm 10  --layer_N 1 \
+    --n_training_threads 16 --n_rollout_threads 32 --num_mini_batch 2 --episode_length 400 --num_env_steps 10000000 --lr 5e-4 \
+    --ppo_epoch 5 --clip_param 0.2 # \
+
+        CUDA_VISIBLE_DEVICES=0 python train/train_smac.py --env_name ${env} --algorithm_name ${algo} --experiment_name ${exp} --map_name ${map} --seed ${seed} \
+    --use_value_active_masks --use_eval --max_grad_norm 10  --layer_N 1 \
+    --n_training_threads 16 --n_rollout_threads 32 --num_mini_batch 2 --episode_length 400 --num_env_steps 10000000 --lr 5e-4 \
+    --ppo_epoch 5 --clip_param 0.2 --use_recurrent_policy False
