@@ -132,7 +132,7 @@ class FootballRunner(Runner):
         self.buffer.insert(
             share_obs=obs,
             obs=obs,
-            rnn_states=rnn_states,
+            rnn_states_actor=rnn_states,
             rnn_states_critic=rnn_states_critic,
             actions=actions,
             action_log_probs=action_log_probs,
@@ -152,7 +152,7 @@ class FootballRunner(Runner):
     @torch.no_grad()
     def eval(self, total_num_steps):
         # reset envs and init rnn and mask
-        eval_obs, eval_share_obs, eval_available_actions = self.eval_envs.reset()
+        eval_obs = self.eval_envs.reset()
         eval_rnn_states = np.zeros((self.n_eval_rollout_threads, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
         eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
 
@@ -177,11 +177,11 @@ class FootballRunner(Runner):
             # [n_envs, n_agents, ...] -> [n_envs*n_agents, ...]
             if self.algorithm_name == "mat" or self.algorithm_name == "mat_dec":
                 eval_actions, eval_rnn_states = \
-                    self.trainer.policy.act(np.concatenate(eval_share_obs),
+                    self.trainer.policy.act(np.concatenate(eval_obs),
                                             np.concatenate(eval_obs),
                                             np.concatenate(eval_rnn_states),
                                             np.concatenate(eval_masks),
-                                            np.concatenate(eval_available_actions),
+                                            available_actions=None,
                                             deterministic=True)
             else:
                 eval_actions, eval_rnn_states = self.trainer.policy.act(
@@ -198,7 +198,7 @@ class FootballRunner(Runner):
             eval_actions_env = [eval_actions[idx, :, 0] for idx in range(self.n_eval_rollout_threads)]
 
             # step
-            eval_obs, eval_share_obs, eval_rewards, eval_dones, eval_infos, eval_available_actions = self.eval_envs.step(eval_actions_env)
+            eval_obs, eval_rewards, eval_dones, eval_infos = self.eval_envs.step(eval_actions_env)
 
             # update goals if done
             eval_dones_env = np.all(eval_dones, axis=-1)
