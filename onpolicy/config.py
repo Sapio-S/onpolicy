@@ -158,7 +158,7 @@ def get_config():
 
     # prepare parameters
     parser.add_argument("--algorithm_name", type=str,
-                        default='mat', choices=["rmappo", "mappo", "mat", "mat_dec"])
+                        default='mat', choices=["rmappo", "mappo", "mat", "mat_dec", "distill"])
 
     parser.add_argument("--experiment_name", type=str, default="check", help="an identifier to distinguish different experiment.")
     parser.add_argument("--seed", type=int, default=1, help="Random seed for numpy/torch")
@@ -296,4 +296,7 @@ def get_config():
     parser.add_argument("--train_maps", type=str, nargs='+', default=None)
     parser.add_argument("--eval_maps", type=str, nargs='+', default=None)
 
+    # distillation
+    parser.add_argument('--distill_epoch', default=4, type=int)
+    
     return parser
