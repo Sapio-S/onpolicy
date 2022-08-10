@@ -66,6 +66,8 @@ def parse_args(args, parser):
     parser.add_argument("--use_state_agent", action='store_false', default=True)
     parser.add_argument("--use_mustalive", action='store_false', default=True)
     parser.add_argument("--add_center_xy", action='store_false', default=True)
+    parser.add_argument('--load_teachers', type=str, default="0",
+                        help="""yaml file including path to different teachers""")
 
     all_args = parser.parse_known_args(args)[0]
 
@@ -81,6 +83,8 @@ def main(args):
     elif all_args.algorithm_name == "mappo" or all_args.algorithm_name == "mat" or all_args.algorithm_name == "mat_dec":
         assert (all_args.use_recurrent_policy == False and all_args.use_naive_recurrent_policy == False), (
             "check recurrent policy!")
+    elif all_args.algorithm_name == "distill":
+        assert (all_args.load_teachers != "0"), ("set teacher yaml dir first!")
     else:
         raise NotImplementedError
 
