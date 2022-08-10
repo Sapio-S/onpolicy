@@ -106,33 +106,6 @@ class R_Actor(nn.Module):
 
         return action_log_probs, dist_entropy
 
-    def distill_evaluate_actions(self, obs, rnn_states, action, masks, available_actions=None, active_masks=None):
-        obs = check(obs).to(**self.tpdv)
-
-        rnn_states = check(rnn_states).to(**self.tpdv)
-        action = check(action).to(**self.tpdv)
-        masks = check(masks).to(**self.tpdv)
-
-        if available_actions is not None:
-            available_actions = check(available_actions).to(**self.tpdv)
-        
-        if active_masks is not None:
-            active_masks = check(active_masks).to(**self.tpdv)
-        
-        actor_features = self.base(obs)
-        
-        if self._use_naive_recurrent_policy or self._use_recurrent_policy:
-            actor_features, rnn_states = self.rnn(actor_features, rnn_states, masks)
-
-        # if self._use_influence_policy:
-        #     mlp_obs = self.mlp(obs)
-        #     actor_features = torch.cat([actor_features, mlp_obs], dim=1)
-        
-        action_log_probs, dist_entropy = self.act.distill_evaluate_actions(actor_features, action, available_actions, active_masks = active_masks if self._use_policy_active_masks else None)
-       
-        return action_log_probs, dist_entropy
-
-
 class R_Critic(nn.Module):
     """
     Critic network class for MAPPO. Outputs value function predictions given centralized input (MAPPO) or

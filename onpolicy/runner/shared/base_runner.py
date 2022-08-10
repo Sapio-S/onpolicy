@@ -69,7 +69,10 @@ class Runner(object):
         elif "distill" in self.algorithm_name:
             from onpolicy.algorithms.r_mappo.algorithm.rMAPPOPolicy import R_MAPPOPolicy as Policy
             from onpolicy.algorithms.utils.distillation import Trainer as TrainAlgo
+            # for MAT
             from onpolicy.algorithms.mat.algorithm.transformer_policy import TransformerPolicy as TeacherPolicy
+            # for MAPPO
+            # from onpolicy.algorithms.r_mappo.algorithm.rMAPPOPolicy import R_MAPPOPolicy as TeacherPolicy
         else:
             from onpolicy.algorithms.r_mappo.r_mappo import R_MAPPO as TrainAlgo
             from onpolicy.algorithms.r_mappo.algorithm.rMAPPOPolicy import R_MAPPOPolicy as Policy
@@ -101,7 +104,7 @@ class Runner(object):
             d = yaml.load(open(self.all_args.load_teachers), Loader=yaml.FullLoader)
             for scene_name, model_dir in d.items():
                 print("Loading {} teacher from {}".format(scene_name, model_dir))
-                
+                # for MAT
                 self.teacher[scene_name] = TeacherPolicy(self.all_args,
                                 self.envs.observation_space[0],
                                 share_observation_space,
@@ -109,6 +112,14 @@ class Runner(object):
                                 self.num_agents, # default 2
                                 device = self.device)
                 self.teacher[scene_name].restore(model_dir)
+                # # for MAPPO
+                # policy_actor_state_dict = torch.load(str(model_dir), map_location=self.device)
+                # self.teacher[scene_name] = TeacherPolicy(self.all_args,
+                #             self.envs.observation_space[0],
+                #             share_observation_space,
+                #             self.envs.action_space[0],
+                #             device = self.device)
+                # self.teacher[scene_name].actor.load_state_dict(policy_actor_state_dict)
 
         if self.model_dir is not None:
             self.restore(self.model_dir)
