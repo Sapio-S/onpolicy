@@ -50,38 +50,39 @@ class DistillationBuffer(SharedReplayBuffer):
         sampler = [rand[i * mini_batch_size:(i + 1) * mini_batch_size] for i in range(num_mini_batch)]
         rows, cols = _shuffle_agent_grid(batch_size, num_agents)
 
-        # for MAT
+        # # for MAT
 
-        share_obs = self.share_obs[:-1].reshape(-1, *self.share_obs.shape[2:])
-        share_obs = share_obs[rows, cols]
-        obs = self.obs[:-1].reshape(-1, *self.obs.shape[2:])
-        obs = obs[rows, cols]
-        rnn_states = self.rnn_states[:-1].reshape(-1, *self.rnn_states.shape[2:])
-        rnn_states = rnn_states[rows, cols]
-        rnn_states_critic = self.rnn_states_critic[:-1].reshape(-1, *self.rnn_states_critic.shape[2:])
-        rnn_states_critic = rnn_states_critic[rows, cols]
-        actions = self.actions.reshape(-1, *self.actions.shape[2:])
-        actions = actions[rows, cols]
-        if self.available_actions is not None:
-            available_actions = self.available_actions[:-1].reshape(-1, *self.available_actions.shape[2:])
-            available_actions = available_actions[rows, cols]
-        value_preds = self.value_preds[:-1].reshape(-1, *self.value_preds.shape[2:])
-        value_preds = value_preds[rows, cols]
-        returns = self.returns[:-1].reshape(-1, *self.returns.shape[2:])
-        returns = returns[rows, cols]
-        masks = self.masks[:-1].reshape(-1, *self.masks.shape[2:])
-        masks = masks[rows, cols]
-        active_masks = self.active_masks[:-1].reshape(-1, *self.active_masks.shape[2:])
-        active_masks = active_masks[rows, cols]
+        # share_obs = self.share_obs[:-1].reshape(-1, *self.share_obs.shape[2:])
+        # share_obs = share_obs[rows, cols]
+        # obs = self.obs[:-1].reshape(-1, *self.obs.shape[2:])
+        # obs = obs[rows, cols]
+        # rnn_states = self.rnn_states[:-1].reshape(-1, *self.rnn_states.shape[2:])
+        # rnn_states = rnn_states[rows, cols]
+        # rnn_states_critic = self.rnn_states_critic[:-1].reshape(-1, *self.rnn_states_critic.shape[2:])
+        # rnn_states_critic = rnn_states_critic[rows, cols]
+        # actions = self.actions.reshape(-1, *self.actions.shape[2:])
+        # actions = actions[rows, cols]
+        # if self.available_actions is not None:
+        #     available_actions = self.available_actions[:-1].reshape(-1, *self.available_actions.shape[2:])
+        #     available_actions = available_actions[rows, cols]
+        # value_preds = self.value_preds[:-1].reshape(-1, *self.value_preds.shape[2:])
+        # value_preds = value_preds[rows, cols]
+        # returns = self.returns[:-1].reshape(-1, *self.returns.shape[2:])
+        # returns = returns[rows, cols]
+        # masks = self.masks[:-1].reshape(-1, *self.masks.shape[2:])
+        # masks = masks[rows, cols]
+        # active_masks = self.active_masks[:-1].reshape(-1, *self.active_masks.shape[2:])
+        # active_masks = active_masks[rows, cols]
 
-        _, action_log_probs, dist_entropy = self.teacher[0].evaluate_actions(share_obs, 
-                                                                                obs, 
-                                                                                rnn_states, 
-                                                                                rnn_states,
-                                                                                actions,
-                                                                                masks, 
-                                                                                available_actions,
-                                                                                active_masks)
+        # _, action_log_probs, dist_entropy = self.teacher[0].evaluate_actions(share_obs, 
+        #                                                                         obs, 
+        #                                                                         rnn_states, 
+        #                                                                         rnn_states,
+        #                                                                         actions,
+        #                                                                         masks, 
+        #                                                                         available_actions,
+        #                                                                         active_masks)
+        # self.teacher_action_log_probs = action_log_probs.resize(self.episode_length, self.n_rollout_threads, self.num_agents, get_dist_rep_shape(self.args)).to("cpu").numpy()
         
         # for MAPPO
         # for e in range(self.n_rollout_threads):
@@ -124,7 +125,6 @@ class DistillationBuffer(SharedReplayBuffer):
         # print(action_log_probs)
         # action_log_probs: torch.Size([8000, 1])
         # self.teacher_dist_rep[:, e, :, :] = dist_rep.resize(self.episode_length, self.num_agents, get_dist_rep_shape(self.args)).to("cpu").numpy()
-        # self.teacher_action_log_probs = action_log_probs.resize(self.episode_length, self.n_rollout_threads, self.num_agents, get_dist_rep_shape(self.args)).to("cpu").numpy()
         
         torch.set_grad_enabled(torch_grad)
 
@@ -301,6 +301,7 @@ class Trainer(object):
 
     def train(self, buffer, turn_on=True):
         train_info = {}
+        self.buffer = buffer
 
         train_info['loss'] = 0
         train_info['policy_loss'] = 0

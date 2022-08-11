@@ -94,7 +94,7 @@ class SMACRunner(Runner):
             # eval
             if episode % self.eval_interval == 0 and self.use_eval:
                 self.eval(total_num_steps)
-                # self.eval_teacher(total_num_steps)
+                self.eval_teacher(total_num_steps)
 
     def warmup(self):
         # reset env
@@ -238,21 +238,21 @@ class SMACRunner(Runner):
 
         while True:
             self.trainer.prep_rollout()
-            # for MAT
-            eval_actions, eval_rnn_states = \
-                self.teacher["MMM2"].act(np.concatenate(eval_share_obs),
-                                        np.concatenate(eval_obs),
-                                        np.concatenate(eval_rnn_states),
-                                        np.concatenate(eval_masks),
-                                        np.concatenate(eval_available_actions),
-                                        deterministic=True)
-            # # for MAPPO
+            # # for MAT
             # eval_actions, eval_rnn_states = \
-            #     self.teacher["MMM2"].act(np.concatenate(eval_obs),
+            #     self.teacher["MMM2"].act(np.concatenate(eval_share_obs),
+            #                             np.concatenate(eval_obs),
             #                             np.concatenate(eval_rnn_states),
             #                             np.concatenate(eval_masks),
             #                             np.concatenate(eval_available_actions),
             #                             deterministic=True)
+            # for MAPPO
+            eval_actions, eval_rnn_states = \
+                self.teacher["MMM2"].act(np.concatenate(eval_obs),
+                                        np.concatenate(eval_rnn_states),
+                                        np.concatenate(eval_masks),
+                                        np.concatenate(eval_available_actions),
+                                        deterministic=True)
             eval_actions = np.array(np.split(_t2n(eval_actions), self.n_eval_rollout_threads))
             eval_rnn_states = np.array(np.split(_t2n(eval_rnn_states), self.n_eval_rollout_threads))
             
