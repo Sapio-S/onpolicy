@@ -162,18 +162,19 @@ class TransformerPolicy:
         if available_actions is not None:
             available_actions = available_actions.reshape(-1, self.num_agents, self.act_dim)
 
-        action_log_probs, values, entropy = self.transformer(cent_obs, obs, actions, available_actions)
+        action_log_probs, values, entropy, rep = self.transformer(cent_obs, obs, actions, available_actions)
 
         action_log_probs = action_log_probs.view(-1, self.act_num)
         values = values.view(-1, 1)
         entropy = entropy.view(-1, self.act_num)
+        rep = entropy.view(-1, self.act_num)
 
         # if self._use_policy_active_masks and active_masks is not None:
         #     entropy = (entropy*active_masks).sum()/active_masks.sum()
         # else:
         #     entropy = entropy.mean()
 
-        return values, action_log_probs, entropy
+        return values, action_log_probs, entropy, rep
 
     def act(self, cent_obs, obs, rnn_states_actor, masks, available_actions=None, deterministic=True):
         """

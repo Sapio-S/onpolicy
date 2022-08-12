@@ -74,7 +74,7 @@ class DistillationBuffer(SharedReplayBuffer):
         active_masks = self.active_masks[:-1].reshape(-1, *self.active_masks.shape[2:])
         active_masks = active_masks[rows, cols]
 
-        _, action_log_probs, dist_entropy = self.teacher[0].evaluate_actions(share_obs, 
+        _, action_log_probs, dist_entropy, dist_rep = self.teacher[0].evaluate_actions(share_obs, 
                                                                                 obs, 
                                                                                 rnn_states, 
                                                                                 rnn_states,
@@ -83,7 +83,7 @@ class DistillationBuffer(SharedReplayBuffer):
                                                                                 available_actions,
                                                                                 active_masks)
         self.teacher_action_log_probs = action_log_probs.resize(self.episode_length, self.n_rollout_threads, self.num_agents, get_dist_rep_shape(self.args)).to("cpu").numpy()
-        self.teacher_dist_rep = dist_entropy.resize(self.episode_length, self.n_rollout_threads, self.num_agents, get_dist_rep_shape(self.args)).to("cpu").numpy()
+        self.teacher_dist_rep = dist_rep.resize(self.episode_length, self.n_rollout_threads, self.num_agents, get_dist_rep_shape(self.args)).to("cpu").numpy()
         
         # for MAPPO
         # for e in range(self.n_rollout_threads):
@@ -237,22 +237,22 @@ class Trainer(object):
 
         # Reshape to do in a single forward pass for all steps
         # student
-        action_log_probs, dist_entropy = self.policy.actor.evaluate_actions(obs_batch, 
+        action_log_probs, dist_entropy, student_dist_rep = self.policy.actor.distill_evaluate_actions(obs_batch, 
                                                                               rnn_states_batch, 
                                                                               actions_batch, 
                                                                               masks_batch, 
                                                                               available_actions_batch,
                                                                               active_masks_batch)
-        CEL = nn.MSELoss()
+        # CEL = nn.MSELoss()
         if self._use_policy_active_masks:
             policy_action_loss = -((action_log_probs * return_batch) * active_masks_batch).sum() / active_masks_batch.sum()
             # print(CEL(action_log_probs, torch.tensor(teacher_action_log_probs_batch).to(self.device)))
-            cross_entropy_loss = (CEL(dist_entropy, torch.tensor(teacher_dist_rep_batch).to(self.device)) * active_masks_batch).sum() / active_masks_batch.sum()
-            # cross_entropy_loss = (self.compute_dist_cross_entropy(student_dist_rep, teacher_dist_rep_batch) * active_masks_batch).sum() / active_masks_batch.sum()
+            # cross_entropy_loss = (CEL(dist_entropy, torch.tensor(teacher_dist_rep_batch).to(self.device)) * active_masks_batch).sum() / active_masks_batch.sum()
+            cross_entropy_loss = (self.compute_dist_cross_entropy(student_dist_rep, teacher_dist_rep_batch) * active_masks_batch).sum() / active_masks_batch.sum()
         else:
             policy_action_loss = -(action_log_probs * return_batch).mean()
-            cross_entropy_loss = CEL(dist_entropy, torch.tensor(teacher_dist_rep_batch).to(self.device)).mean()
-            # cross_entropy_loss = self.compute_dist_cross_entropy(student_dist_rep, teacher_dist_rep_batch).mean()
+            # cross_entropy_loss = CEL(dist_entropy, torch.tensor(teacher_dist_rep_batch).to(self.device)).mean()
+            cross_entropy_loss = self.compute_dist_cross_entropy(student_dist_rep, teacher_dist_rep_batch).mean()
         loss = policy_action_loss + cross_entropy_loss
 
         # # second way for computing loss
@@ -299,6 +299,9 @@ class Trainer(object):
     #     point_v = (point_std2 * np.sqrt(2*np.pi)).log() + 0.5 * (point_std1.pow(2) + (point_mean1 - point_mean2).pow(2)) / point_std2.pow(2)
     #     point_v = torch.sum(point_v, dim=-1, keepdim=True)
     #     return region_v + point_v
+
+    def compute_dist_cross_entropy(self, dist1, dist2):
+        return - torch.sum(dist1 * dist2.log(), dim=-1, keepdim=True)
 
     def train(self, buffer, turn_on=True):
         train_info = {}

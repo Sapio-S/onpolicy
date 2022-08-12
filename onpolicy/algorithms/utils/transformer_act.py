@@ -47,6 +47,27 @@ def discrete_parallel_act(decoder, obs_rep, obs, action, batch_size, n_agent, ac
     entropy = distri.entropy().unsqueeze(-1)
     return action_log, entropy
 
+def distill_discrete_parallel_act(decoder, obs_rep, obs, action, batch_size, n_agent, action_dim, tpdv,
+                          available_actions=None):
+    one_hot_action = F.one_hot(action.squeeze(-1), num_classes=action_dim)  # (batch, n_agent, action_dim)
+    # print(action_dim)
+    # print(one_hot_action.shape)
+    shifted_action = torch.zeros((batch_size, n_agent, action_dim + 1)).to(**tpdv)
+    shifted_action[:, 0, 0] = 1
+    shifted_action[:, 1:, 1:] = one_hot_action[:, :-1, :]
+    logit = decoder(shifted_action, obs_rep, obs)
+    if available_actions is not None:
+        logit[available_actions == 0] = -1e10
+
+    distri = Categorical(logits=logit)
+    # print(action)
+    # print(action.shape) # torch.Size([800, 10, 1])
+    # print(distri) # torch.Size([800, 10, 18]
+    action_log = distri.log_prob(action.squeeze(-1)).unsqueeze(-1)
+    # print(action_log) # torch.Size([800, 10, 1])
+    entropy = distri.entropy().unsqueeze(-1)
+    dist_rep = distri.probs
+    return action_log, entropy, dist_rep
 
 def continuous_autoregreesive_act(decoder, obs_rep, obs, batch_size, n_agent, action_dim, tpdv,
                                   deterministic=False):

@@ -5,7 +5,7 @@ import math
 import numpy as np
 from torch.distributions import Categorical
 from onpolicy.algorithms.utils.util import check, init
-from onpolicy.algorithms.utils.transformer_act import discrete_autoregreesive_act
+from onpolicy.algorithms.utils.transformer_act import discrete_autoregreesive_act, distill_discrete_parallel_act
 from onpolicy.algorithms.utils.transformer_act import discrete_parallel_act
 from onpolicy.algorithms.utils.transformer_act import continuous_autoregreesive_act
 from onpolicy.algorithms.utils.transformer_act import continuous_parallel_act
@@ -267,13 +267,13 @@ class MultiAgentTransformer(nn.Module):
         v_loc, obs_rep = self.encoder(state, obs)
         if self.action_type == 'Discrete':
             action = action.long()
-            action_log, entropy = discrete_parallel_act(self.decoder, obs_rep, obs, action, batch_size,
+            action_log, entropy, rep = distill_discrete_parallel_act(self.decoder, obs_rep, obs, action, batch_size,
                                                         self.n_agent, self.action_dim, self.tpdv, available_actions)
         else:
             action_log, entropy = continuous_parallel_act(self.decoder, obs_rep, obs, action, batch_size,
                                                           self.n_agent, self.action_dim, self.tpdv)
 
-        return action_log, v_loc, entropy
+        return action_log, v_loc, entropy, rep
 
     def get_actions(self, state, obs, available_actions=None, deterministic=False):
         # state unused
