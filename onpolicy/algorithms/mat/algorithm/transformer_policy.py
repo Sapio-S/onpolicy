@@ -167,7 +167,7 @@ class TransformerPolicy:
         action_log_probs = action_log_probs.view(-1, self.act_num)
         values = values.view(-1, 1)
         entropy = entropy.view(-1, self.act_num)
-        rep = entropy.view(-1, self.act_num)
+        # rep = rep.view(-1, self.act_num)
 
         # if self._use_policy_active_masks and active_masks is not None:
         #     entropy = (entropy*active_masks).sum()/active_masks.sum()
