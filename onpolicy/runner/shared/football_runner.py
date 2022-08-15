@@ -4,7 +4,7 @@ import numpy as np
 from functools import reduce
 import torch
 from onpolicy.runner.shared.base_runner import Runner
-
+from collections import defaultdict, deque
 
 def _t2n(x):
     return x.detach().cpu().numpy()
@@ -13,6 +13,7 @@ class FootballRunner(Runner):
     """Runner class to perform training, evaluation. and data collection for SMAC. See parent class for details."""
     def __init__(self, config):
         super(FootballRunner, self).__init__(config)
+        self.env_infos = defaultdict(list)
 
     def run(self):
         self.warmup()
@@ -81,7 +82,9 @@ class FootballRunner(Runner):
                                 int(total_num_steps / (end - start))))
 
                 self.log_train(train_infos, total_num_steps)
-
+                self.log_env(self.env_infos, total_num_steps)
+                self.env_infos = defaultdict(list)
+                
                 if len(done_episodes_rewards) > 0:
                     aver_episode_rewards = np.mean(done_episodes_rewards)
                     if self.use_wandb:
@@ -140,6 +143,15 @@ class FootballRunner(Runner):
         values, actions, action_log_probs, rnn_states, rnn_states_critic = data
 
         dones_env = np.all(dones, axis=1)
+        if np.any(dones_env):
+            for done, info in zip(dones_env, infos[0]):
+                if done:
+                    self.env_infos["goal"].append(info["score_reward"])
+                    if info["score_reward"] > 0:
+                        self.env_infos["win_rate"].append(1)
+                    else:
+                        self.env_infos["win_rate"].append(0)
+                    self.env_infos["steps"].append(info["max_steps"] - info["steps_left"])
 
         rnn_states[dones_env == True] = np.zeros(((dones_env == True).sum(), self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
         rnn_states_critic[dones_env == True] = np.zeros(((dones_env == True).sum(), self.num_agents, *self.buffer.rnn_states_critic.shape[3:]), dtype=np.float32)
@@ -171,19 +183,30 @@ class FootballRunner(Runner):
 
     @torch.no_grad()
     def eval(self, total_num_steps):
-        eval_episode = 0
-        eval_episode_rewards = []
-        one_episode_rewards = [0 for _ in range(self.all_args.eval_episodes)]
-        eval_episode_scores = []
-        one_episode_scores = [0 for _ in range(self.all_args.eval_episodes)]
-
+        # reset envs and init rnn and mask
         eval_obs, eval_share_obs, ava = self.eval_envs.reset()
-        eval_rnn_states = np.zeros((self.all_args.eval_episodes, self.num_agents, self.recurrent_N,
-                                    self.hidden_size), dtype=np.float32)
-        eval_masks = np.ones((self.all_args.eval_episodes, self.num_agents, 1), dtype=np.float32)
+        eval_rnn_states = np.zeros((self.n_eval_rollout_threads, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
+        eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
 
-        while True:
+        # init eval goals
+        num_done = 0
+        eval_goals = np.zeros(self.all_args.eval_episodes)
+        eval_win_rates = np.zeros(self.all_args.eval_episodes)
+        eval_steps = np.zeros(self.all_args.eval_episodes)
+        step = 0
+        quo = self.all_args.eval_episodes // self.n_eval_rollout_threads
+        rem = self.all_args.eval_episodes % self.n_eval_rollout_threads
+        done_episodes_per_thread = np.zeros(self.n_eval_rollout_threads, dtype=int)
+        eval_episodes_per_thread = done_episodes_per_thread + quo
+        eval_episodes_per_thread[:rem] += 1
+        unfinished_thread = (done_episodes_per_thread != eval_episodes_per_thread)
+
+        # loop until enough episodes
+        while num_done < self.all_args.eval_episodes and step < self.episode_length:
+            # get actions
             self.trainer.prep_rollout()
+
+            # [n_envs, n_agents, ...] -> [n_envs*n_agents, ...]
             if self.algorithm_name == "mat" or self.algorithm_name == "mat_dec":
                 eval_actions, eval_rnn_states = \
                     self.trainer.policy.act(np.concatenate(eval_share_obs),
@@ -199,42 +222,48 @@ class FootballRunner(Runner):
                                             np.concatenate(eval_masks),
                                             np.concatenate(ava),
                                             deterministic=True)
-            eval_actions = np.array(np.split(_t2n(eval_actions), self.all_args.eval_episodes))
-            eval_rnn_states = np.array(np.split(_t2n(eval_rnn_states), self.all_args.eval_episodes))
+            
+            # [n_envs*n_agents, ...] -> [n_envs, n_agents, ...]
+            eval_actions = np.array(np.split(_t2n(eval_actions), self.n_eval_rollout_threads))
+            eval_rnn_states = np.array(np.split(_t2n(eval_rnn_states), self.n_eval_rollout_threads))
 
-            # Obser reward and next obs
-            eval_obs, eval_share_obs, eval_rewards, eval_dones, eval_infos, ava = self.eval_envs.step(eval_actions)
-            eval_rewards = np.mean(eval_rewards, axis=1).flatten()
-            one_episode_rewards += eval_rewards
+            eval_actions_env = [eval_actions[idx, :, 0] for idx in range(self.n_eval_rollout_threads)]
 
-            eval_scores = [t_info[0]["score_reward"] for t_info in eval_infos]
-            one_episode_scores += np.array(eval_scores)
+            # step
+            eval_obs, eval_share_obs, eval_rewards, eval_dones, eval_infos, ava = self.eval_envs.step(eval_actions_env)
 
-            eval_dones_env = np.all(eval_dones, axis=1)
-            eval_rnn_states[eval_dones_env == True] = np.zeros(((eval_dones_env == True).sum(), self.num_agents,
-                                                                self.recurrent_N, self.hidden_size), dtype=np.float32)
-            eval_masks = np.ones((self.all_args.eval_episodes, self.num_agents, 1), dtype=np.float32)
-            eval_masks[eval_dones_env == True] = np.zeros(((eval_dones_env == True).sum(), self.num_agents, 1),
-                                                          dtype=np.float32)
+            # update goals if done
+            eval_dones_env = np.all(eval_dones, axis=-1)
+            eval_dones_unfinished_env = eval_dones_env[unfinished_thread]
+            if np.any(eval_dones_unfinished_env):
+                for idx_env in range(self.n_eval_rollout_threads):
+                    if unfinished_thread[idx_env] and eval_dones_env[idx_env]:
+                        eval_goals[num_done] = eval_infos[idx_env][0]["score_reward"]
+                        eval_win_rates[num_done] = 1 if eval_infos[idx_env][0]["score_reward"] > 0 else 0
+                        eval_steps[num_done] = eval_infos[idx_env][0]["max_steps"] - eval_infos[idx_env][0]["steps_left"]
+                        # print("episode {:>2d} done by env {:>2d}: {}".format(num_done, idx_env, eval_infos[idx_env]["score_reward"]))
+                        num_done += 1
+                        done_episodes_per_thread[idx_env] += 1
+            unfinished_thread = (done_episodes_per_thread != eval_episodes_per_thread)
 
-            for eval_i in range(self.all_args.eval_episodes):
-                if eval_dones_env[eval_i]:
-                    eval_episode += 1
-                    eval_episode_rewards.append(one_episode_rewards[eval_i])
-                    one_episode_rewards[eval_i] = 0
+            # reset rnn and masks for done envs
+            eval_rnn_states[eval_dones_env == True] = np.zeros(((eval_dones_env == True).sum(), self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
+            eval_masks = np.ones((self.all_args.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
+            eval_masks[eval_dones_env == True] = np.zeros(((eval_dones_env == True).sum(), self.num_agents, 1), dtype=np.float32)
+            step += 1
 
-                    eval_episode_scores.append(one_episode_scores[eval_i])
-                    one_episode_scores[eval_i] = 0
-
-            if eval_episode >= self.all_args.eval_episodes:
-                key_average = '/eval_average_episode_rewards'
-                key_max = '/eval_max_episode_rewards'
-                key_scores = '/eval_average_episode_scores'
-                eval_env_infos = {key_average: eval_episode_rewards,
-                                  key_max: [np.max(eval_episode_rewards)],
-                                  key_scores: eval_episode_scores}
-                self.log_env(eval_env_infos, total_num_steps)
-
-                print("eval average episode rewards: {}, scores: {}."
-                      .format(np.mean(eval_episode_rewards), np.mean(eval_episode_scores)))
-                break
+        # get expected goal
+        eval_goal = np.mean(eval_goals)
+        eval_win_rate = np.mean(eval_win_rates)
+        eval_step = np.mean(eval_steps)
+    
+        # log and print
+        print("eval expected goal is {}.".format(eval_goal))
+        if self.use_wandb:
+            wandb.log({"eval_goal": eval_goal}, step=total_num_steps)
+            wandb.log({"eval_win_rate": eval_win_rate}, step=total_num_steps)
+            wandb.log({"eval_step": eval_step}, step=total_num_steps)
+        else:
+            self.writter.add_scalars("eval_goal", {"expected_goal": eval_goal}, total_num_steps)
+            self.writter.add_scalars("eval_win_rate", {"eval_win_rate": eval_win_rate}, total_num_steps)
+            self.writter.add_scalars("eval_step", {"expected_step": eval_step}, total_num_steps)

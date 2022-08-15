@@ -35,6 +35,8 @@ class FootballEnv(MultiAgentEnv):
 
         self.pre_obs = None
 
+        self.max_steps = self.env.unwrapped.observation()[0]["steps_left"]
+
     def _encode_obs(self, raw_obs):
         obs = self.feature_encoder.encode(raw_obs.copy())
         obs_cat = np.hstack(
@@ -58,7 +60,7 @@ class FootballEnv(MultiAgentEnv):
 
     def step(self, actions):
         actions_int = [int(a) for a in actions]
-        o, r, d, i = self.env.step(actions_int)
+        o, r, d, info = self.env.step(actions_int)
         obs = []
         ava = []
         for obs_dict in o:
@@ -73,8 +75,19 @@ class FootballEnv(MultiAgentEnv):
         self.pre_obs = o
 
         dones = np.ones((self.n_agents), dtype=bool) * d
-        infos = [i for n in range(self.n_agents)]
+        info2 = self._info_wrapper(info)
+        infos = [info2 for n in range(self.n_agents)]
+
         return obs, state, rewards, dones, infos, ava
+
+    def _info_wrapper(self, info):
+        state = self.env.unwrapped.observation()
+        info.update(state[0])
+        info["max_steps"] = self.max_steps
+        info["active"] = np.array([state[i]["active"] for i in range(self.n_agents)])
+        info["designated"] = np.array([state[i]["designated"] for i in range(self.n_agents)])
+        info["sticky_actions"] = np.stack([state[i]["sticky_actions"] for i in range(self.n_agents)])
+        return info
 
     def render(self, **kwargs):
         # self.env.render(**kwargs)
