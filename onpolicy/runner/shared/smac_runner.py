@@ -4,6 +4,7 @@ import numpy as np
 from functools import reduce
 import torch
 from onpolicy.runner.shared.base_runner import Runner
+from collections import defaultdict, deque
 
 def _t2n(x):
     return x.detach().cpu().numpy()
@@ -12,6 +13,7 @@ class SMACRunner(Runner):
     """Runner class to perform training, evaluation. and data collection for SMAC. See parent class for details."""
     def __init__(self, config):
         super(SMACRunner, self).__init__(config)
+        self.env_infos = defaultdict(list)
 
     def run(self):
         self.warmup()   
@@ -90,6 +92,8 @@ class SMACRunner(Runner):
                 train_infos['dead_ratio'] = 1 - self.buffer.active_masks.sum() / reduce(lambda x, y: x*y, list(self.buffer.active_masks.shape)) 
                 
                 self.log_train(train_infos, total_num_steps)
+                self.log_env(self.env_infos, total_num_steps)
+                self.env_infos = defaultdict(list)
 
             # eval
             if episode % self.eval_interval == 0 and self.use_eval:
@@ -131,6 +135,11 @@ class SMACRunner(Runner):
         values, actions, action_log_probs, rnn_states, rnn_states_critic = data
 
         dones_env = np.all(dones, axis=1)
+        if np.any(dones_env):
+            for done, info in zip(dones_env, infos[0]):
+                if done:
+                    self.env_infos["steps"].append(info["episode_step"])
+                    # print(info["episode_step"])
 
         rnn_states[dones_env == True] = np.zeros(((dones_env == True).sum(), self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
         rnn_states_critic[dones_env == True] = np.zeros(((dones_env == True).sum(), self.num_agents, *self.buffer.rnn_states_critic.shape[3:]), dtype=np.float32)

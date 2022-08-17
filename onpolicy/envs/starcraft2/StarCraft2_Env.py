@@ -498,7 +498,8 @@ class StarCraft2Env(MultiAgentEnv):
                     "battles_draw": self.timeouts,
                     "restarts": self.force_restarts,
                     "bad_transition": bad_transition,
-                    "won": self.win_counted
+                    "won": self.win_counted,
+                    "episode_step": self._episode_steps
                 }
                 if terminated:
                     dones[i] = True
@@ -573,7 +574,8 @@ class StarCraft2Env(MultiAgentEnv):
                 "battles_draw": self.timeouts,
                 "restarts": self.force_restarts,
                 "bad_transition": bad_transition,
-                "won": self.win_counted
+                "won": self.win_counted,
+                "episode_step": self._episode_steps
             }
 
             if terminated:
