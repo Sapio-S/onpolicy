@@ -68,7 +68,8 @@ def parse_args(args, parser):
     parser.add_argument("--add_center_xy", action='store_false', default=True)
     parser.add_argument('--load_teachers', type=str, default="0",
                         help="""yaml file including path to different teachers""")
-
+    parser.add_argument('--teacher_algo', type=str, default='MAT')
+    
     all_args = parser.parse_known_args(args)[0]
 
     return all_args

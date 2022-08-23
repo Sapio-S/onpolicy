@@ -69,10 +69,10 @@ class Runner(object):
         elif "distill" in self.algorithm_name:
             from onpolicy.algorithms.r_mappo.algorithm.rMAPPOPolicy import R_MAPPOPolicy as Policy
             from onpolicy.algorithms.utils.distillation import Trainer as TrainAlgo
-            # for MAT
-            from onpolicy.algorithms.mat.algorithm.transformer_policy import TransformerPolicy as TeacherPolicy
-            # # for MAPPO
-            # from onpolicy.algorithms.r_mappo.algorithm.rMAPPOPolicy import R_MAPPOPolicy as TeacherPolicy
+            if self.all_args.teacher_algo =="MAT":
+                from onpolicy.algorithms.mat.algorithm.transformer_policy import TransformerPolicy as TeacherPolicy
+            else:
+                from onpolicy.algorithms.r_mappo.algorithm.rMAPPOPolicy import R_MAPPOPolicy as TeacherPolicy
         else:
             from onpolicy.algorithms.r_mappo.r_mappo import R_MAPPO as TrainAlgo
             from onpolicy.algorithms.r_mappo.algorithm.rMAPPOPolicy import R_MAPPOPolicy as Policy
@@ -104,22 +104,22 @@ class Runner(object):
             d = yaml.load(open(self.all_args.load_teachers))
             for scene_name, model_dir in d.items():
                 print("Loading {} teacher from {}".format(scene_name, model_dir))
-                # for MAT
-                self.teacher[scene_name] = TeacherPolicy(self.all_args,
+                if self.all_args.teacher_algo =="MAT":
+                    self.teacher[scene_name] = TeacherPolicy(self.all_args,
+                                    self.envs.observation_space[0],
+                                    share_observation_space,
+                                    self.envs.action_space[0],
+                                    self.num_agents, # default 2
+                                    device = self.device)
+                    self.teacher[scene_name].restore(model_dir)
+                else:
+                    policy_actor_state_dict = torch.load(str(model_dir), map_location=self.device)
+                    self.teacher[scene_name] = TeacherPolicy(self.all_args,
                                 self.envs.observation_space[0],
                                 share_observation_space,
                                 self.envs.action_space[0],
-                                self.num_agents, # default 2
                                 device = self.device)
-                self.teacher[scene_name].restore(model_dir)
-                # # for MAPPO
-                # policy_actor_state_dict = torch.load(str(model_dir), map_location=self.device)
-                # self.teacher[scene_name] = TeacherPolicy(self.all_args,
-                #             self.envs.observation_space[0],
-                #             share_observation_space,
-                #             self.envs.action_space[0],
-                #             device = self.device)
-                # self.teacher[scene_name].actor.load_state_dict(policy_actor_state_dict)
+                    self.teacher[scene_name].actor.load_state_dict(policy_actor_state_dict)
 
         if self.model_dir is not None:
             self.restore(self.model_dir)
@@ -165,7 +165,18 @@ class Runner(object):
         """Calculate returns for the collected data."""
         self.trainer.prep_rollout()
         if "distill" in self.algorithm_name:
-            self.buffer.compute_returns()
+            if self.algorithm_name == "mat" or self.algorithm_name == "mat_dec":
+                next_values = self.trainer.policy.get_values(np.concatenate(self.buffer.share_obs[-1]),
+                                                            np.concatenate(self.buffer.obs[-1]),
+                                                            np.concatenate(self.buffer.rnn_states_critic[-1]),
+                                                            np.concatenate(self.buffer.masks[-1]))
+            else:
+                next_values = self.trainer.policy.get_values(np.concatenate(self.buffer.share_obs[-1]),
+                                                            np.concatenate(self.buffer.rnn_states_critic[-1]),
+                                                            np.concatenate(self.buffer.masks[-1]))
+            next_values = np.array(np.split(_t2n(next_values), self.n_rollout_threads))
+            self.buffer.compute_returns_original(next_values)
+            # self.buffer.compute_returns()
         else:
             if self.algorithm_name == "mat" or self.algorithm_name == "mat_dec":
                 next_values = self.trainer.policy.get_values(np.concatenate(self.buffer.share_obs[-1]),
