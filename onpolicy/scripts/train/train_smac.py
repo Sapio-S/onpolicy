@@ -67,6 +67,8 @@ def parse_args(args, parser):
     parser.add_argument("--use_mustalive", action='store_false', default=True)
     parser.add_argument("--add_center_xy", action='store_false', default=True)
 
+    parser.add_argument("--render", action='store_true', default=False)
+
     all_args = parser.parse_known_args(args)[0]
 
     return all_args
@@ -172,7 +174,10 @@ def main(args):
     }
 
     runner = Runner(config)
-    runner.run()
+    if all_args.render:
+        runner.render()
+    else:
+        runner.run()
 
     # post process
     envs.close()

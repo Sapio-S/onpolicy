@@ -230,3 +230,69 @@ class SMACRunner(Runner):
                 else:
                     self.writter.add_scalars("eval_win_rate", {"eval_win_rate": eval_win_rate}, total_num_steps)
                 break
+
+    @torch.no_grad()
+    def render(self, total_num_steps=0):
+        eval_battles_won = 0
+        eval_episode = 0
+
+        eval_episode_rewards = []
+        one_episode_rewards = []
+
+        eval_obs, eval_share_obs, eval_available_actions = self.eval_envs.reset()
+
+        eval_rnn_states = np.zeros((self.n_eval_rollout_threads, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
+        eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
+
+        while True:
+            self.trainer.prep_rollout()
+            if self.algorithm_name == "mat" or self.algorithm_name == "mat_dec":
+                eval_actions, eval_rnn_states = \
+                    self.trainer.policy.act(np.concatenate(eval_share_obs),
+                                            np.concatenate(eval_obs),
+                                            np.concatenate(eval_rnn_states),
+                                            np.concatenate(eval_masks),
+                                            np.concatenate(eval_available_actions),
+                                            deterministic=True)
+            else:
+                eval_actions, eval_rnn_states = \
+                    self.trainer.policy.act(np.concatenate(eval_obs),
+                                            np.concatenate(eval_rnn_states),
+                                            np.concatenate(eval_masks),
+                                            np.concatenate(eval_available_actions),
+                                            deterministic=True)
+            eval_actions = np.array(np.split(_t2n(eval_actions), self.n_eval_rollout_threads))
+            eval_rnn_states = np.array(np.split(_t2n(eval_rnn_states), self.n_eval_rollout_threads))
+            
+            # Obser reward and next obs
+            eval_obs, eval_share_obs, eval_rewards, eval_dones, eval_infos, eval_available_actions = self.eval_envs.step(eval_actions)
+            one_episode_rewards.append(eval_rewards)
+
+            eval_dones_env = np.all(eval_dones, axis=1)
+
+            eval_rnn_states[eval_dones_env == True] = np.zeros(((eval_dones_env == True).sum(), self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
+
+            eval_masks = np.ones((self.all_args.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
+            eval_masks[eval_dones_env == True] = np.zeros(((eval_dones_env == True).sum(), self.num_agents, 1), dtype=np.float32)
+
+            for eval_i in range(self.n_eval_rollout_threads):
+                if eval_dones_env[eval_i]:
+                    eval_episode += 1
+                    eval_episode_rewards.append(np.sum(one_episode_rewards, axis=0))
+                    one_episode_rewards = []
+                    if eval_infos[eval_i][0]['won']:
+                        eval_battles_won += 1
+
+            if eval_episode >= self.all_args.eval_episodes:
+                eval_episode_rewards = np.array(eval_episode_rewards)
+                eval_env_infos = {'eval_average_episode_rewards': eval_episode_rewards}                
+                self.log_env(eval_env_infos, total_num_steps)
+                eval_win_rate = eval_battles_won/eval_episode
+                self.eval_envs.save_replay()
+                print("eval win rate is {}.".format(eval_win_rate))
+                if self.use_wandb:
+                    wandb.log({"eval_win_rate": eval_win_rate}, step=total_num_steps)
+                else:
+                    self.writter.add_scalars("eval_win_rate", {"eval_win_rate": eval_win_rate}, total_num_steps)
+                break
+        
