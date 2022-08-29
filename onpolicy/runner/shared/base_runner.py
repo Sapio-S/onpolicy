@@ -101,7 +101,7 @@ class Runner(object):
         if "distill" in self.algorithm_name:
             self.teacher = {}
             import yaml
-            d = yaml.load(open(self.all_args.load_teachers))
+            d = yaml.safe_load(open(self.all_args.load_teachers))
             for scene_name, model_dir in d.items():
                 print("Loading {} teacher from {}".format(scene_name, model_dir))
                 if self.all_args.teacher_algo =="MAT":

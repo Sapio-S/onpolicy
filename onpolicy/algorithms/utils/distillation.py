@@ -11,7 +11,7 @@ def get_dist_rep_shape(args):
     return an integer, the dims of repre for action distributions
     '''
 
-    return 36
+    return 14
 
     # return args.grid_size ** 2 + 2 * 2
 
@@ -249,8 +249,11 @@ class Trainer(object):
                                                                               available_actions_batch,
                                                                             active_masks_batch)
         # criterion = nn.CrossEntropyLoss()
-        KL_loss = nn.KLDivLoss(reduction="batchmean")
-        eps=1e-15
+        # KL_loss = nn.KLDivLoss(reduction="batchmean")
+        def KL_loss_discrete(region_prob1, region_prob2):
+            return - torch.sum(region_prob1 * region_prob2.log(), dim=-1, keepdim=True)
+        
+        eps=1e-17
         # def compute_dist_cross_entropy(dist1, dist2):
         #     eps=1e-15
         #     region_v = - torch.sum(dist1 * torch.log(dist2+eps), dim=-1, keepdim=True)
@@ -260,12 +263,13 @@ class Trainer(object):
             policy_action_loss = -((action_log_probs * return_batch) * active_masks_batch).sum() / active_masks_batch.sum()
             # cross_entropy_loss = (criterion(student_dist_rep, student_dist_rep) * active_masks_batch).sum() / active_masks_batch.sum()
             # cross_entropy_loss = compute_dist_cross_entropy(student_dist_rep,teacher_dist_rep_batch).mean()
-            cross_entropy_loss = KL_loss((student_dist_rep+eps).log(), teacher_dist_rep_batch)
+            cross_entropy_loss = (KL_loss_discrete(student_dist_rep+eps, teacher_dist_rep_batch+eps) * active_masks_batch).sum() / active_masks_batch.sum()
             # student_dist_rep2 = student_dist_rep.cpu().detach().numpy()
         else:
             policy_action_loss = -(action_log_probs * return_batch).mean()
             cross_entropy_loss = criterion(student_dist_rep, student_dist_rep).mean()
         # loss = cross_entropy_loss
+        # print(cross_entropy_loss)
         loss = cross_entropy_loss
         # print(cross_entropy_loss)
         # print(ce1)
