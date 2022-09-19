@@ -114,6 +114,8 @@ class Runner(object):
                     self.teacher[scene_name].restore(model_dir)
                 else:
                     policy_actor_state_dict = torch.load(str(model_dir), map_location=self.device)
+                    self.all_args.use_recurrent_policy = True
+                    # self.all_args.layer_N = 2
                     self.teacher[scene_name] = TeacherPolicy(self.all_args,
                                 self.envs.observation_space[0],
                                 share_observation_space,

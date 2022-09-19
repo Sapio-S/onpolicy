@@ -3,15 +3,15 @@ from torch import nn
 import torch.nn.functional as F
 from onpolicy.utils.shared_buffer import SharedReplayBuffer
 from onpolicy.algorithms.utils.util import check
-from onpolicy.utils.util import get_gard_norm, huber_loss, mse_loss
+from onpolicy.utils.util import get_gard_norm, huber_loss, mse_loss, get_shape_from_act_space
 import numpy as np
 
-def get_dist_rep_shape(args):
-    '''
-    return an integer, the dims of repre for action distributions
-    '''
+# def get_dist_rep_shape(args):
+#     '''
+#     return an integer, the dims of repre for action distributions
+#     '''
 
-    return 14
+#     return 18
 
     # return args.grid_size ** 2 + 2 * 2
 
@@ -24,9 +24,9 @@ def _shuffle_agent_grid(x, y):
 class DistillationBuffer(SharedReplayBuffer):
     def __init__(self, args, num_agents, obs_space, share_obs_space, act_space):
         super(DistillationBuffer, self).__init__(args, num_agents, obs_space, share_obs_space, act_space)
-        dist_rep_shape = get_dist_rep_shape(args)
+        self.dist_rep_shape = act_space.n
         self.teacher_dist_rep = np.zeros(
-            (self.episode_length, self.n_rollout_threads, num_agents, dist_rep_shape), dtype=np.float32)
+            (self.episode_length, self.n_rollout_threads, num_agents, self.dist_rep_shape), dtype=np.float32)
         self.teacher_action_log_probs = np.zeros(
             (self.episode_length, self.n_rollout_threads, num_agents, 1), dtype=np.float32)
         self.num_agents = num_agents
@@ -82,7 +82,7 @@ class DistillationBuffer(SharedReplayBuffer):
                                                                                     available_actions,
                                                                                     active_masks)
             self.teacher_action_log_probs = action_log_probs.resize(self.episode_length, self.n_rollout_threads, self.num_agents,1).to("cpu").numpy()
-            self.teacher_dist_rep = dist_rep.resize(self.episode_length, self.n_rollout_threads, self.num_agents, get_dist_rep_shape(self.args)).to("cpu").numpy()
+            self.teacher_dist_rep = dist_rep.resize(self.episode_length, self.n_rollout_threads, self.num_agents, self.dist_rep_shape).to("cpu").numpy()
         
         else:
             # for e in range(self.n_rollout_threads):
@@ -101,7 +101,7 @@ class DistillationBuffer(SharedReplayBuffer):
             #                                                                             available_actions,
             #                                                                             active_masks)
             #     self.teacher_action_log_probs[:, e, :, :] = action_log_probs.resize(self.episode_length, self.num_agents, 1).to("cpu").numpy()
-            #     self.teacher_dist_rep[:, e, :, :] = dist_rep.resize(self.episode_length, self.num_agents, get_dist_rep_shape(self.args)).to("cpu").numpy()
+            #     self.teacher_dist_rep[:, e, :, :] = dist_rep.resize(self.episode_length, self.num_agents, self.dist_rep_shape).to("cpu").numpy()
         
             share_obs = self.share_obs[:-1].reshape(-1, *self.share_obs.shape[3:])
             obs = self.obs[:-1].reshape(-1, *self.obs.shape[3:])
@@ -122,7 +122,7 @@ class DistillationBuffer(SharedReplayBuffer):
                                                                                         available_actions,
                                                                                         active_masks)
             self.teacher_action_log_probs = action_log_probs.resize(self.episode_length, self.n_rollout_threads, self.num_agents, 1).to("cpu").numpy()
-            self.teacher_dist_rep = dist_rep.resize(self.episode_length,  self.n_rollout_threads, self.num_agents, get_dist_rep_shape(self.args)).to("cpu").numpy()
+            self.teacher_dist_rep = dist_rep.resize(self.episode_length,  self.n_rollout_threads, self.num_agents, self.dist_rep_shape).to("cpu").numpy()
         
         torch.set_grad_enabled(torch_grad)
 
@@ -248,33 +248,16 @@ class Trainer(object):
                                                                               masks_batch, 
                                                                               available_actions_batch,
                                                                             active_masks_batch)
-        # criterion = nn.CrossEntropyLoss()
-        # KL_loss = nn.KLDivLoss(reduction="batchmean")
-        def KL_loss_discrete(region_prob1, region_prob2):
-            return - torch.sum(region_prob1 * region_prob2.log(), dim=-1, keepdim=True)
+
+        KL_loss = nn.KLDivLoss(reduction="batchmean")
+        # def KL_loss_discrete(region_prob1, region_prob2):
+        #     return - torch.sum(region_prob1 * region_prob2.log(), dim=-1, keepdim=True)
         
         eps=1e-17
-        # def compute_dist_cross_entropy(dist1, dist2):
-        #     eps=1e-15
-        #     region_v = - torch.sum(dist1 * torch.log(dist2+eps), dim=-1, keepdim=True)
-        #     return region_v
 
-        if self._use_policy_active_masks:
-            policy_action_loss = -((action_log_probs * return_batch) * active_masks_batch).sum() / active_masks_batch.sum()
-            # cross_entropy_loss = (criterion(student_dist_rep, student_dist_rep) * active_masks_batch).sum() / active_masks_batch.sum()
-            # cross_entropy_loss = compute_dist_cross_entropy(student_dist_rep,teacher_dist_rep_batch).mean()
-            cross_entropy_loss = (KL_loss_discrete(student_dist_rep+eps, teacher_dist_rep_batch+eps) * active_masks_batch).sum() / active_masks_batch.sum()
-            # student_dist_rep2 = student_dist_rep.cpu().detach().numpy()
-        else:
-            policy_action_loss = -(action_log_probs * return_batch).mean()
-            cross_entropy_loss = criterion(student_dist_rep, student_dist_rep).mean()
-        # loss = cross_entropy_loss
-        # print(cross_entropy_loss)
+        policy_action_loss = -((action_log_probs * return_batch) * active_masks_batch).sum() / active_masks_batch.sum()
+        cross_entropy_loss = (KL_loss((student_dist_rep+eps).log(), (teacher_dist_rep_batch+eps)) * active_masks_batch).sum() / active_masks_batch.sum()
         loss = cross_entropy_loss
-        # print(cross_entropy_loss)
-        # print(ce1)
-        # print(ce2)
-        # print(kl)
 
         self.policy.actor_optimizer.zero_grad()
 

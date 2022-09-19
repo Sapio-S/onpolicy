@@ -94,7 +94,7 @@ class SMACRunner(Runner):
             # eval
             if episode % self.eval_interval == 0 and self.use_eval:
                 self.eval(total_num_steps)
-                # self.eval_teacher(total_num_steps)
+                self.eval_teacher(total_num_steps)
 
     def warmup(self):
         # reset env
@@ -111,13 +111,24 @@ class SMACRunner(Runner):
     @torch.no_grad()
     def collect(self, step):
         self.trainer.prep_rollout()
+        # value, action, action_log_prob, rnn_state, rnn_state_critic \
+        #     = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs[step]),
+        #                                     np.concatenate(self.buffer.obs[step]),
+        #                                     np.concatenate(self.buffer.rnn_states[step]),
+        #                                     np.concatenate(self.buffer.rnn_states_critic[step]),
+        #                                     np.concatenate(self.buffer.masks[step]),
+        #                                     np.concatenate(self.buffer.available_actions[step]))
+        # print("model action", action)
         value, action, action_log_prob, rnn_state, rnn_state_critic \
-            = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs[step]),
+            = self.teacher["MMM2"].get_actions(np.concatenate(self.buffer.share_obs[step]),
                                             np.concatenate(self.buffer.obs[step]),
                                             np.concatenate(self.buffer.rnn_states[step]),
                                             np.concatenate(self.buffer.rnn_states_critic[step]),
                                             np.concatenate(self.buffer.masks[step]),
                                             np.concatenate(self.buffer.available_actions[step]))
+        # print("teacher action", action)
+        # print("")
+
         # [self.envs, agents, dim]
         values = np.array(np.split(_t2n(value), self.n_rollout_threads))
         actions = np.array(np.split(_t2n(action), self.n_rollout_threads))
