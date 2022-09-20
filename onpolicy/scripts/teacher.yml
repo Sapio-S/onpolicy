@@ -1,5 +1,5 @@
-# MMM2 : /home/eva_data/xyq/transformer_3124.pt
-MMM2 : /home/eva_data/xyq/actor.pt
+MMM2 : /home/eva_data/xyq/transformer_3124.pt
+# MMM2 : /home/eva_data/xyq/actor.pt
 
 # MMM2 : /home/eva_data/xyq/onpolicy/onpolicy/scripts/results/StarCraft2/27m_vs_30m/rmappo/0811/wandb/run-20220811_101616-324qriz5/files/actor.pt
 # MMM2 : /home/eva_data/xyq/onpolicy/onpolicy/scripts/results/StarCraft2/27m_vs_30m/mat/0811/wandb/run-20220811_104254-1tid0m1r/files/transformer_3124.pt

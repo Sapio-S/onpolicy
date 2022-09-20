@@ -2,9 +2,9 @@
 env="StarCraft2"
 map="MMM2"
 algo="distill"
-exp="mappo_torchKL"
+exp="rmappo_torchKL_mat"
 seed_max=1
-teacher_algo="RMAPPO"
+teacher_algo="MAT"
 
 echo "env is ${env}, map is ${map}, algo is ${algo}, exp is ${exp}, max seed is ${seed_max}"
 for seed in `seq ${seed_max}`;
@@ -14,7 +14,7 @@ do
     --teacher_algo ${teacher_algo} \
     --ppo_epoch 5 --gain 0.01 --use_value_active_masks --use_eval \
     --n_rollout_threads 8 --episode_length 400 --num_env_steps 2500000 --num_mini_batch 1 \
-    --load_teacher '/home/eva_data/xyq/onpolicy/onpolicy/scripts/teacher.yml' --distill_epoch 10 --use_recurrent_policy #--use_wandb # --layer_N 2 
+    --load_teacher '/home/eva_data/xyq/onpolicy/onpolicy/scripts/teacher.yml' --distill_epoch 10 #--use_recurrent_policy #--use_wandb # --layer_N 2 
     
     #  --lr 5e-4 --n_training_threads 1 --n_rollout_threads 8 --num_mini_batch 1 --episode_length 400 --num_env_steps 10000000 --ppo_epoch 5 --use_value_active_masks --use_eval \
     # --use_wandb # \
