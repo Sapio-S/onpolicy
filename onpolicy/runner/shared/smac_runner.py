@@ -119,6 +119,7 @@ class SMACRunner(Runner):
         #                                     np.concatenate(self.buffer.masks[step]),
         #                                     np.concatenate(self.buffer.available_actions[step]))
         # print("model action", action)
+
         value, action, action_log_prob, rnn_state, rnn_state_critic \
             = self.teacher["MMM2"].get_actions(np.concatenate(self.buffer.share_obs[step]),
                                             np.concatenate(self.buffer.obs[step]),
