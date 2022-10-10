@@ -158,7 +158,7 @@ def get_config():
 
     # prepare parameters
     parser.add_argument("--algorithm_name", type=str,
-                        default='mat', choices=["rmappo", "mappo", "mat", "mat_dec"])
+                        default='mat', choices=["rmappo", "mappo", "mat", "mat_dec", "mappg", "rmappg"])
 
     parser.add_argument("--experiment_name", type=str, default="check", help="an identifier to distinguish different experiment.")
     parser.add_argument("--seed", type=int, default=1, help="Random seed for numpy/torch")
@@ -295,5 +295,13 @@ def get_config():
     # add for online multi-task
     parser.add_argument("--train_maps", type=str, nargs='+', default=None)
     parser.add_argument("--eval_maps", type=str, nargs='+', default=None)
+
+    # ppg parameters
+    parser.add_argument("--aux_epoch", type=int, default=5,
+                        help='number of auxiliary epochs (default: 4)')
+    parser.add_argument("--clone_coef", type=float, default=1.0,
+                        help='clone term coefficient (default: 0.01)')
+    parser.add_argument("--use_single_network", action='store_true',
+                        default=False, help="Whether to use centralized V function")
 
     return parser
